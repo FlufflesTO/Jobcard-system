@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KHARON - Digital Job Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Custom styles for better aesthetics and mobile experience */
+        body {
+            font-family: 'Inter', sans-serif; /* Using Inter font as a default modern font */
+            background-color: #f4f4f5; /* Light gray background */
+        }
+        .container {
+            max-width: 800px; /* Max width for larger screens, centered */
+            margin: auto;
+            padding: 1rem; /* Padding for mobile */
+        }
+        .form-section {
+            background-color: white;
+            padding: 1.5rem; /* 24px */
+            border-radius: 0.5rem; /* 8px */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            margin-bottom: 1.5rem; /* 24px */
+        }
+        .form-section h2 {
+            font-size: 1.25rem; /* 20px */
+            font-weight: 600;
+            color: #1f2937; /* Dark gray text */
+            border-bottom: 1px solid #e5e7eb; /* Light gray border */
+            padding-bottom: 0.75rem; /* 12px */
+            margin-bottom: 1rem; /* 16px */
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem; /* 8px */
+            color: #374151; /* Medium gray text */
+        }
+        input[type="text"],
+        input[type="date"],
+        input[type="time"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem; /* 12px */
+            border: 1px solid #d1d5db; /* Gray border */
+            border-radius: 0.375rem; /* 6px */
+            box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            background-color: white; 
+        }
+        input[readonly] { /* Style for readonly inputs */
+            background-color: #e9ecef; /* Light gray to indicate non-editable */
+            cursor: not-allowed;
+        }
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="time"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #2563eb; /* Blue border on focus */
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgb(59 130 246 / 0.25);
+        }
+        textarea {
+            min-height: 100px;
+        }
+        .signature-pad-container {
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            position: relative;
+            height: 200px; 
+            touch-action: none; 
+        }
+        .signature-pad-container canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 0.375rem;
+        }
+        .clear-signature-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #ef4444; 
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .clear-signature-button:hover {
+            background-color: #dc2626; 
+        }
+        .action-buttons-container { /* Container for submit buttons */
+            display: flex;
+            gap: 1rem; /* Space between buttons */
+            margin-top: 1rem;
+        }
+        .action-button { /* Common style for action buttons */
+            flex-grow: 1; /* Make buttons share space equally */
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
+            text-align: center;
+        }
+        .email-button { /* Specific style for email button */
+            background-color: #2563eb; /* Blue */
+        }
+        .email-button:hover {
+            background-color: #1d4ed8; /* Darker blue */
+        }
+        .pdf-button { /* Specific style for PDF button */
+            background-color: #16a34a; /* Green */
+        }
+        .pdf-button:hover {
+            background-color: #15803d; /* Darker green */
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 0.25rem;
+            border-color: #d1d5db;
+        }
+        .header-info {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .header-info h1 {
+            font-size: 1.875rem; 
+            font-weight: 700;
+            color: #111827; 
+        }
+        .header-info p {
+            color: #4b5563; 
+            font-size: 0.875rem; 
+        }
+        .grid-cols-1-sm { 
+             grid-template-columns: 1fr;
+        }
+        @media (min-width: 640px) { 
+            .grid-cols-1-sm {
+                 grid-template-columns: repeat(2, minmax(0, 1fr)); 
+            }
+        }
+        #pdfStatus {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #1f2937;
+            text-align: center;
+            height: 1.25em; /* Reserve space to prevent layout shift */
+        }
+
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container" id="jobCardContainer"> <div class="header-info form-section">
+            <h1>KHARON</h1>
+            <p>FIRE & SECURITY SOLUTIONS</p>
+            <p>061 545 8830 | admin@kharon.co.za</p>
+            <p>Unit 58, M5 Freeway Park, 2B Uppercamp Road, Ndabeni, Maitland, 7405 | 2016/303076/07 | www.kharon.co.za</p>
+        </div>
+
+        <form id="jobCardForm">
+            <div class="form-section">
+                <h2>Job Card Details</h2>
+                <div class="grid grid-cols-1-sm gap-4 mb-4">
+                    <div>
+                        <label for="worksNo">Works No.:</label>
+                        <input type="text" id="worksNo" name="worksNo"> 
+                    </div>
+                    <div>
+                        <label for="techName">Tech:</label>
+                        <select id="techName" name="techName">
+                            <option value="" disabled selected>Select Technician</option>
+                            <option value="Gert Venter">Gert Venter</option>
+                            <option value="Connor Venter">Connor Venter</option>
+                            <option value="Tiaan Klopper">Tiaan Klopper</option>
+                            <option value="Zhora Spires">Zhora Spires</option>
+                            <option value="Anthony Mahogany">Anthony Mahogany</option>
+                            <option value="Ashley Weitz">Ashley Weitz</option>
+                            <option value="Wesley Fortune">Wesley Fortune</option>
+                            <option value="Gershwyn Jacobs">Gershwyn Jacobs</option>
+                            <option value="Eston Martin">Eston Martin</option>
+                            <option value="Lorenzo Van Rooyen">Lorenzo Van Rooyen</option>
+                            <option value="Other">Other (Specify Below)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="jobcardNo">Jobcard No.:</label>
+                        <input type="text" id="jobcardNo" name="jobcardNo" readonly>
+                    </div>
+                    <div>
+                        <label for="jobDate">Date:</label>
+                        <input type="date" id="jobDate" name="jobDate">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1-sm gap-4">
+                    <div>
+                        <label for="clientNameInput">Client:</label>
+                        <input type="text" id="clientNameInput" name="clientNameInput">
+                    </div>
+                    <div>
+                        <label for="siteAddress">Site:</label>
+                        <input type="text" id="siteAddress" name="siteAddress">
+                    </div>
+                    <div>
+                        <label for="contactPerson">Contact:</label>
+                        <input type="text" id="contactPerson" name="contactPerson">
+                    </div>
+                    <div>
+                        <label for="clientRef">Client Ref.:</label>
+                        <input type="text" id="clientRef" name="clientRef">
+                    </div>
+                </div>
+                 <div id="otherTechContainer" class="mt-4" style="display: none;">
+                    <label for="otherTechName">Specify Other Technician:</label>
+                    <input type="text" id="otherTechName" name="otherTechName">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Work Instruction</h2>
+                <textarea id="workInstruction" name="workInstruction" placeholder="Describe the panel fault, constant beep, no display, etc."></textarea>
+            </div>
+
+            <div class="form-section">
+                <h2>Work Executed / Material Supplied</h2>
+                <textarea id="workExecuted" name="workExecuted" placeholder="Detail work done, e.g., Reset panel, Power cycle, Battery voltage checks, MCP alarm details..."></textarea>
+            </div>
+
+            <div class="form-section">
+                <h2>Remarks</h2>
+                <textarea id="remarks" name="remarks" placeholder="e.g., Battery voltage @ 9V: Monitor, suggest replacement. MCP 2023: Needs replacement element..."></textarea>
+            </div>
+
+            <div class="form-section">
+                <h2>Time & Mileage</h2>
+                <div class="grid grid-cols-1-sm md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="logDate">Date:</label>
+                        <input type="date" id="logDate" name="logDate">
+                    </div>
+                    <div>
+                        <label for="timeIn">Time In:</label>
+                        <input type="time" id="timeIn" name="timeIn">
+                    </div>
+                    <div>
+                        <label for="timeOut">Time Out:</label>
+                        <input type="time" id="timeOut" name="timeOut">
+                    </div>
+                    <div>
+                        <label for="totalTime">Total Time (hrs):</label>
+                        <input type="number" id="totalTime" name="totalTime" step="0.1" placeholder="e.g., 0.5">
+                    </div>
+                    <div>
+                        <label for="mileage">Mileage (km):</label>
+                        <input type="number" id="mileage" name="mileage" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Completion Status</h2>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="equipmentGoodOrder" name="equipmentGoodOrder">
+                    Installation & Equipment received by customer in good order & condition.
+                </label>
+                <p class="text-sm text-gray-600 mb-4">Equipment remains property of Kharon until paid in full.</p>
+                <div class="grid grid-cols-1-sm gap-4">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="callComplete" name="callComplete">
+                        Call Complete
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="returnCallRequired" name="returnCallRequired">
+                        Return Call Required
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Signatures</h2>
+                <div class="mb-6">
+                    <label for="clientNameSignature">Client Name:</label>
+                    <input type="text" id="clientNameSignature" name="clientNameSignature" class="mb-2">
+                    <label for="clientSignaturePad">Client Signature:</label>
+                    <div class="signature-pad-container">
+                        <canvas id="clientSignaturePad"></canvas>
+                        <button type="button" class="clear-signature-button" data-pad="clientSignaturePad">Clear</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="technicianSignaturePad">Technician Signature:</label>
+                     <div class="signature-pad-container">
+                        <canvas id="technicianSignaturePad"></canvas>
+                        <button type="button" class="clear-signature-button" data-pad="technicianSignaturePad">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section text-center">
+                <div class="action-buttons-container">
+                    <button type="submit" class="action-button email-button">Email to Office</button>
+                    <button type="button" id="savePdfButton" class="action-button pdf-button">Save as PDF</button>
+                </div>
+                <div id="pdfStatus"></div> <p class="text-xs text-gray-500 mt-2">
+                    "Email to Office" will attempt to open your default email client.
+                    For fully automated email sending, server-side integration is required.
+                </p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // --- URL Parameter Parsing and Pre-filling ---
+        function prefillFormFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const fieldsToPrefill = {
+                'worksNo': 'worksNo',
+                'clientName': 'clientNameInput',
+                'siteName': 'siteAddress',
+                'siteContact': 'contactPerson',
+                'clientRef': 'clientRef',
+                'instruction': 'workInstruction'
+            };
+            for (const paramName in fieldsToPrefill) {
+                if (params.has(paramName)) {
+                    const elementId = fieldsToPrefill[paramName];
+                    const element = document.getElementById(elementId);
+                    if (element) element.value = params.get(paramName);
+                }
+            }
+        }
+
+        // --- Job Card Number Management ---
+        const jobCardNoInput = document.getElementById('jobcardNo');
+        const localStorageKey = 'kharonNextJobCardNumber';
+        function loadAndSetJobCardNumber() {
+            let nextJobCardNum = parseInt(localStorage.getItem(localStorageKey)) || 1;
+            jobCardNoInput.value = String(nextJobCardNum).padStart(4, '0');
+        }
+        function incrementAndStoreJobCardNumber() {
+            let currentNum = parseInt(jobCardNoInput.value) || 0;
+            let nextNum = currentNum + 1;
+            localStorage.setItem(localStorageKey, nextNum);
+        }
+
+        // --- Signature Pad Setup ---
+        const clientSignatureCanvas = document.getElementById('clientSignaturePad');
+        const technicianSignatureCanvas = document.getElementById('technicianSignaturePad');
+        function resizeCanvas(canvas) {
+            if (!canvas.offsetWidth || !canvas.offsetHeight) {
+                const originalDisplay = canvas.style.display;
+                canvas.style.display = 'block';
+                if (!canvas.offsetWidth || !canvas.offsetHeight) {
+                    console.warn("Canvas has no dimensions for resizing:", canvas.id);
+                    canvas.style.display = originalDisplay; return;
+                }
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.style.width = canvas.offsetWidth + 'px';
+                canvas.style.height = canvas.offsetHeight + 'px';
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                canvas.style.display = originalDisplay;
+            } else {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.style.width = canvas.offsetWidth + 'px';
+                canvas.style.height = canvas.offsetHeight + 'px';
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+            }
+        }
+        let clientSignaturePad, technicianSignaturePad;
+
+        window.addEventListener('load', () => {
+            prefillFormFromURL();
+            loadAndSetJobCardNumber();
+
+            if (clientSignatureCanvas.offsetParent !== null) resizeCanvas(clientSignatureCanvas);
+            if (technicianSignatureCanvas.offsetParent !== null) resizeCanvas(technicianSignatureCanvas);
+
+            clientSignaturePad = new SignaturePad(clientSignatureCanvas, { backgroundColor: 'rgb(255, 255, 255)' });
+            technicianSignaturePad = new SignaturePad(technicianSignatureCanvas, { backgroundColor: 'rgb(255, 255, 255)' });
+
+            window.addEventListener('resize', () => {
+                if (clientSignatureCanvas.offsetParent !== null) {
+                    resizeCanvas(clientSignatureCanvas); if (clientSignaturePad) clientSignaturePad.clear();
+                }
+                if (technicianSignatureCanvas.offsetParent !== null) {
+                    resizeCanvas(technicianSignatureCanvas); if (technicianSignaturePad) technicianSignaturePad.clear();
+                }
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            const jobDateEl = document.getElementById('jobDate');
+            const logDateEl = document.getElementById('logDate');
+            if (jobDateEl && !jobDateEl.value) jobDateEl.value = today;
+            if (logDateEl && !logDateEl.value) logDateEl.value = today;
+        });
+
+        // --- Clear Signature Buttons ---
+        document.querySelectorAll('.clear-signature-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const padId = button.getAttribute('data-pad');
+                if (padId === 'clientSignaturePad' && clientSignaturePad) clientSignaturePad.clear();
+                else if (padId === 'technicianSignaturePad' && technicianSignaturePad) technicianSignaturePad.clear();
+            });
+        });
+
+        // --- Handle "Other" Technician Input ---
+        const techNameSelect = document.getElementById('techName');
+        const otherTechContainer = document.getElementById('otherTechContainer');
+        const otherTechNameInput = document.getElementById('otherTechName');
+        techNameSelect.addEventListener('change', function() {
+            if (this.value === 'Other') otherTechContainer.style.display = 'block';
+            else { otherTechContainer.style.display = 'none'; otherTechNameInput.value = ''; }
+        });
+
+        // --- Form Submission (Email) ---
+        document.getElementById('jobCardForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission, will be handled by mailto
+
+            if (!clientSignaturePad || !technicianSignaturePad) {
+                const messageBox = document.createElement('div');
+                messageBox.textContent = "Signature pads are not ready. Please wait a moment and try again.";
+                messageBox.style.cssText = "position:fixed; top:10px; left:50%; transform:translateX(-50%); background-color:red; color:white; padding:10px; border-radius:5px; z-index:1000;";
+                document.body.appendChild(messageBox);
+                setTimeout(() => messageBox.remove(), 3000);
+                return;
+            }
+
+            const formData = new FormData(this);
+            let emailBody = "KHARON - JOB CARD DETAILS:\n\n";
+            let techNameValue = formData.get('techName');
+            if (techNameValue === 'Other') techNameValue = formData.get('otherTechName') || 'Other (Not Specified)';
+            
+            emailBody += "--- Job Card Details ---\n";
+            emailBody += `Works No.: ${formData.get('worksNo') || 'N/A'}\n`;
+            emailBody += `Tech: ${techNameValue || 'N/A'}\n`;
+            emailBody += `Jobcard No.: ${formData.get('jobcardNo') || 'N/A'}\n`;
+            emailBody += `Date: ${formData.get('jobDate') || 'N/A'}\n\n`;
+            emailBody += `Client: ${formData.get('clientNameInput') || 'N/A'}\n`;
+            emailBody += `Site: ${formData.get('siteAddress') || 'N/A'}\n`;
+            emailBody += `Contact: ${formData.get('contactPerson') || 'N/A'}\n`;
+            emailBody += `Client Ref.: ${formData.get('clientRef') || 'N/A'}\n\n`;
+            emailBody += "--- Work Instruction ---\n";
+            emailBody += `${formData.get('workInstruction') || 'N/A'}\n\n`;
+            emailBody += "--- Work Executed / Material Supplied ---\n";
+            emailBody += `${formData.get('workExecuted') || 'N/A'}\n\n`;
+            emailBody += "--- Remarks ---\n";
+            emailBody += `${formData.get('remarks') || 'N/A'}\n\n`;
+            emailBody += "--- Time & Mileage ---\n";
+            emailBody += `Date: ${formData.get('logDate') || 'N/A'}\n`;
+            emailBody += `Time In: ${formData.get('timeIn') || 'N/A'}\n`;
+            emailBody += `Time Out: ${formData.get('timeOut') || 'N/A'}\n`;
+            emailBody += `Total Time (hrs): ${formData.get('totalTime') || 'N/A'}\n`;
+            emailBody += `Mileage (km): ${formData.get('mileage') || 'N/A'}\n\n`;
+            emailBody += "--- Completion Status ---\n";
+            emailBody += `Equipment in good order: ${formData.get('equipmentGoodOrder') ? 'Yes' : 'No'}\n`;
+            emailBody += `Call Complete: ${formData.get('callComplete') ? 'Yes' : 'No'}\n`;
+            emailBody += `Return Call Required: ${formData.get('returnCallRequired') ? 'Yes' : 'No'}\n\n`;
+            emailBody += "--- Signatures ---\n";
+            emailBody += `Client Name: ${formData.get('clientNameSignature') || 'N/A'}\n`;
+            if (clientSignaturePad && !clientSignaturePad.isEmpty()) emailBody += "Client Signature: Captured\n";
+            else emailBody += "Client Signature: Not Provided\n";
+            if (technicianSignaturePad && !technicianSignaturePad.isEmpty()) emailBody += "Technician Signature: Captured\n\n";
+            else emailBody += "Technician Signature: Not Provided\n\n";
+            
+            const recipientEmail = 'admin@kharon.co.za'; 
+            const emailSubject = `Job Card Submission - Works No: ${formData.get('worksNo') || 'N/A'} - Client: ${formData.get('clientNameInput') || 'N/A'} - Job No: ${formData.get('jobcardNo')}`;
+            let mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+            if (mailtoLink.length > 1800) {
+                const shortAlert = document.createElement('div');
+                shortAlert.textContent = "The job card data is too long for a simple email link. Email body shortened.";
+                shortAlert.style.cssText = "position:fixed; top:10px; left:50%; transform:translateX(-50%); background-color:orange; color:black; padding:10px; border-radius:5px; z-index:1000; text-align:center;";
+                document.body.appendChild(shortAlert);
+                setTimeout(() => shortAlert.remove(), 5000);
+                let shortEmailBody = `Job Card Summary:\nWorks No: ${formData.get('worksNo') || 'N/A'}\nClient: ${formData.get('clientNameInput') || 'N/A'}\nTech: ${techNameValue || 'N/A'}\nJob No: ${formData.get('jobcardNo')}\nDate: ${formData.get('jobDate') || 'N/A'}\n\nFull details were too long for this email link.`;
+                mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(shortEmailBody)}`;
+            }
+            
+            window.location.href = mailtoLink;
+            // Increment job card number AFTER attempting to send email,
+            // regardless of whether the user actually sends it from their client.
+            incrementAndStoreJobCardNumber(); 
+        });
+
+        // --- Save as PDF ---
+        const savePdfButton = document.getElementById('savePdfButton');
+        const pdfStatusDiv = document.getElementById('pdfStatus');
+
+        savePdfButton.addEventListener('click', async () => {
+            pdfStatusDiv.textContent = 'Generating PDF... Please wait.';
+            const { jsPDF } = window.jspdf; // Ensure jsPDF is accessed correctly from the global scope
+            const jobCardElement = document.getElementById('jobCardContainer'); // Element to capture
+
+            // Temporarily remove box-shadow from form sections for cleaner PDF capture
+            const formSections = jobCardElement.querySelectorAll('.form-section');
+            formSections.forEach(section => section.style.boxShadow = 'none');
+            
+            // Also, temporarily remove box-shadow from the main container if it has one
+            const originalContainerShadow = jobCardElement.style.boxShadow;
+            jobCardElement.style.boxShadow = 'none';
+
+
+            try {
+                const canvas = await html2canvas(jobCardElement, {
+                    scale: 2, // Increase scale for better quality
+                    useCORS: true, // If you have external images (not applicable here but good practice)
+                    logging: false // Suppress html2canvas logs in console
+                });
+
+                // Restore box-shadows after capture
+                formSections.forEach(section => section.style.boxShadow = ''); // Restore default or original
+                jobCardElement.style.boxShadow = originalContainerShadow;
+
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'p', // portrait
+                    unit: 'mm', // millimeters
+                    format: 'a4' // A4 size
+                });
+
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = imgProps.width;
+                const imgHeight = imgProps.height;
+
+                // Calculate the aspect ratio
+                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                const newImgWidth = imgWidth * ratio;
+                const newImgHeight = imgHeight * ratio;
+
+                // Calculate position to center the image (optional)
+                const x = (pdfWidth - newImgWidth) / 2;
+                const y = (pdfHeight - newImgHeight) / 20; // Add some top margin
+
+                pdf.addImage(imgData, 'PNG', x, y, newImgWidth, newImgHeight);
+
+                // Construct filename
+                const formData = new FormData(document.getElementById('jobCardForm'));
+                const jobNo = formData.get('jobcardNo') || 'UnknownJobNo';
+                const client = formData.get('clientNameInput') || 'NoClient';
+                const site = formData.get('siteAddress') || 'NoSite';
+                const clientRef = formData.get('clientRef') || 'NoRef';
+                const worksNo = formData.get('worksNo') || 'NoWorksNo';
+                
+                const currentDate = new Date();
+                const month = currentDate.toLocaleString('default', { month: 'long' });
+                const year = currentDate.getFullYear();
+
+                const filename = `${jobNo} ${month} ${year} - ${client} - ${site} - ${clientRef} - ${worksNo}.pdf`;
+                
+                pdf.save(filename.replace(/[/\\?%*:|"<>]/g, '-')); // Sanitize filename
+
+                pdfStatusDiv.textContent = 'PDF saved successfully!';
+                // Increment job card number if PDF is saved, similar to email.
+                // This ensures the number increments even if only PDF is saved.
+                incrementAndStoreJobCardNumber(); 
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                pdfStatusDiv.textContent = 'Error generating PDF. See console for details.';
+                 // Restore box-shadows even if there's an error
+                formSections.forEach(section => section.style.boxShadow = '');
+                jobCardElement.style.boxShadow = originalContainerShadow;
+            } finally {
+                setTimeout(() => { pdfStatusDiv.textContent = ''; }, 4000); // Clear status message
+            }
+        });
+
+    </script>
+</body>
+</html>
