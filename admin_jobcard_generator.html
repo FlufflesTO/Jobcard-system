@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Generate Job Card Link</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for scroll */
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 1.5rem; /* 24px */
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            margin-bottom: 1rem;
+        }
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #2563eb;
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgb(59 130 246 / 0.25);
+        }
+        textarea {
+            min-height: 120px;
+        }
+        .button-group {
+            display: flex;
+            gap: 0.5rem; /* Space between buttons */
+            margin-top: 1.5rem;
+        }
+        button {
+            flex-grow: 1; /* Make buttons take equal width */
+            background-color: #2563eb;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        button.secondary {
+            background-color: #6b7280; /* Gray for secondary actions */
+        }
+        button.secondary:hover {
+            background-color: #4b5563;
+        }
+        #generatedLinkOutput {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: #f9fafb;
+            word-break: break-all; /* Ensure long links wrap */
+            font-size: 0.875rem;
+            color: #374151;
+            min-height: 50px; /* Ensure it's visible even when empty */
+        }
+        .info-text {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        .success-message {
+            color: #16a34a; /* Green */
+            font-weight: 500;
+            text-align: center;
+            margin-top: 0.5rem;
+            height: 1.25rem; /* Reserve space to prevent layout shift */
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Admin: Generate Job Card Link</h1>
+        <p class="info-text mb-6">Fill in the details below to create a pre-filled job card link for the technician.</p>
+
+        <form id="adminLinkForm">
+            <div>
+                <label for="adminWorksNo">Works No.:</label>
+                <input type="text" id="adminWorksNo" name="adminWorksNo">
+            </div>
+            <div>
+                <label for="adminClientName">Client Name:</label>
+                <input type="text" id="adminClientName" name="adminClientName">
+            </div>
+            <div>
+                <label for="adminSiteName">Site Name/Address:</label>
+                <input type="text" id="adminSiteName" name="adminSiteName">
+            </div>
+            <div>
+                <label for="adminSiteContact">Site Contact (Name & Number):</label>
+                <input type="text" id="adminSiteContact" name="adminSiteContact">
+            </div>
+            <div>
+                <label for="adminClientRef">Client Ref.:</label>
+                <input type="text" id="adminClientRef" name="adminClientRef">
+            </div>
+            <div>
+                <label for="adminWorkInstruction">Work Instruction:</label>
+                <textarea id="adminWorkInstruction" name="adminWorkInstruction"></textarea>
+            </div>
+
+            <div class="button-group">
+                <button type="button" id="generateLinkButton">Generate Link</button>
+                <button type="button" id="copyLinkButton" class="secondary" style="display:none;">Copy Link</button>
+            </div>
+        </form>
+
+        <div id="generatedLinkOutputContainer" style="display:none;">
+            <p class="font-medium mt-6 mb-1 text-gray-700">Generated Job Card Link:</p>
+            <div id="generatedLinkOutput"></div>
+            <div id="copySuccessMessage" class="success-message"></div>
+        </div>
+         <p class="info-text mt-4">
+            <strong>Important:</strong> Ensure the technician's job card HTML file is accessible at the base URL configured in this script.
+        </p>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        // This URL MUST point to the technician's job card HTML file (e.g., digital_job_card_v1.html)
+        // hosted in a way that it renders directly as a webpage.
+        // MODIFIED to use the provided Google Drive link, transformed for direct rendering.
+        const TECHNICIAN_JOB_CARD_URL = 'https://drive.google.com/uc?export=view&id=1v2wWdeHzeuInF5Ukx2Te9iYj-kyVV3YY'; 
+
+        const generateButton = document.getElementById('generateLinkButton');
+        const copyButton = document.getElementById('copyLinkButton');
+        const linkOutputDiv = document.getElementById('generatedLinkOutput');
+        const linkOutputContainer = document.getElementById('generatedLinkOutputContainer');
+        const copySuccessMessage = document.getElementById('copySuccessMessage');
+
+        generateButton.addEventListener('click', () => {
+            const params = new URLSearchParams();
+
+            // Get values and add to params if they exist
+            const worksNo = document.getElementById('adminWorksNo').value.trim();
+            if (worksNo) params.append('worksNo', worksNo);
+
+            const clientName = document.getElementById('adminClientName').value.trim();
+            if (clientName) params.append('clientName', clientName);
+            
+            const siteName = document.getElementById('adminSiteName').value.trim();
+            if (siteName) params.append('siteName', siteName);
+
+            const siteContact = document.getElementById('adminSiteContact').value.trim();
+            if (siteContact) params.append('siteContact', siteContact);
+
+            const clientRef = document.getElementById('adminClientRef').value.trim();
+            if (clientRef) params.append('clientRef', clientRef);
+
+            const instruction = document.getElementById('adminWorkInstruction').value.trim();
+            if (instruction) params.append('instruction', instruction);
+
+            // Construct the full URL
+            // Since TECHNICIAN_JOB_CARD_URL is now an absolute URL, the logic for relative paths is not strictly needed here.
+            // However, keeping it won't harm if it's an absolute URL.
+            let baseUrl = TECHNICIAN_JOB_CARD_URL;
+            // The following 'if' block is for handling relative paths, which is not the case if using the full Google Drive URL.
+            // if (!TECHNICIAN_JOB_CARD_URL.startsWith('http')) { 
+            //      const pathArray = window.location.pathname.split('/');
+            //      pathArray.pop(); 
+            //      const currentDirBase = window.location.origin + pathArray.join('/') + '/';
+            //      baseUrl = currentDirBase + TECHNICIAN_JOB_CARD_URL;
+            // }
+
+
+            const generatedUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`;
+
+
+            linkOutputDiv.textContent = generatedUrl;
+            linkOutputContainer.style.display = 'block';
+            copyButton.style.display = 'inline-block'; // Show copy button
+            copySuccessMessage.textContent = ''; // Clear previous success message
+        });
+
+        copyButton.addEventListener('click', () => {
+            const linkToCopy = linkOutputDiv.textContent;
+            if (linkToCopy && navigator.clipboard) {
+                navigator.clipboard.writeText(linkToCopy)
+                    .then(() => {
+                        copySuccessMessage.textContent = 'Link copied to clipboard!';
+                        setTimeout(() => { copySuccessMessage.textContent = ''; }, 3000); // Clear message after 3s
+                    })
+                    .catch(err => {
+                        copySuccessMessage.textContent = 'Failed to copy link.';
+                        console.error('Failed to copy text: ', err);
+                    });
+            } else if (linkToCopy) {
+                // Fallback for older browsers (less common now)
+                const textArea = document.createElement("textarea");
+                textArea.value = linkToCopy;
+                textArea.style.position = "fixed"; // Avoid scrolling to bottom
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    copySuccessMessage.textContent = 'Link copied! (fallback)';
+                    setTimeout(() => { copySuccessMessage.textContent = ''; }, 3000);
+                } catch (err) {
+                    copySuccessMessage.textContent = 'Failed to copy (fallback).';
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
+            }
+        });
+    </script>
+</body>
+</html>
